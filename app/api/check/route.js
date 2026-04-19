@@ -1,4 +1,5 @@
 import { createAdminClient } from "../../../lib/supabase/admin";
+import { PLAN_LIMITS } from "../../../lib/plan-limits";
 
 function normalize(text) {
   return String(text || "").trim().toLowerCase();
@@ -16,6 +17,12 @@ function parseJsonFromText(text) {
   }
 
   return JSON.parse(trimmed);
+}
+
+function getMonthKey() {
+  const now = new Date();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${month}`;
 }
 
 async function requestOpenEndedCheck(prompt) {
@@ -67,7 +74,71 @@ async function requireUser(req) {
     return { error: "Invalid session. Please log in again.", status: 401 };
   }
 
-  return { user };
+  return { user, supabase };
+}
+
+async function getMembership(supabase, userId) {
+  const { data, error } = await supabase
+    .from("memberships")
+    .select("plan, status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Could not load membership.");
+  }
+
+  return {
+    plan: data?.plan || "free",
+    status: data?.status || "active",
+  };
+}
+
+async function getOrCreateUsageCounter(supabase, userId, monthKey) {
+  const { data: existing, error: fetchError } = await supabase
+    .from("usage_counters")
+    .select("id, generations_used, checks_used, month_key")
+    .eq("user_id", userId)
+    .eq("month_key", monthKey)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error("Could not load usage.");
+  }
+
+  if (existing) {
+    return existing;
+  }
+
+  const { data: created, error: createError } = await supabase
+    .from("usage_counters")
+    .insert({
+      user_id: userId,
+      month_key: monthKey,
+      generations_used: 0,
+      checks_used: 0,
+    })
+    .select("id, generations_used, checks_used, month_key")
+    .single();
+
+  if (createError) {
+    throw new Error("Could not create usage counter.");
+  }
+
+  return created;
+}
+
+async function incrementChecks(supabase, usageRow) {
+  const { error } = await supabase
+    .from("usage_counters")
+    .update({
+      checks_used: usageRow.checks_used + 1,
+    })
+    .eq("id", usageRow.id);
+
+  if (error) {
+    throw new Error("Could not update check usage.");
+  }
 }
 
 export async function POST(req) {
@@ -76,6 +147,37 @@ export async function POST(req) {
 
     if (authResult.error) {
       return Response.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const { user, supabase } = authResult;
+    const membership = await getMembership(supabase, user.id);
+
+    if (membership.status !== "active") {
+      return Response.json(
+        { error: "Your membership is not active." },
+        { status: 403 }
+      );
+    }
+
+    const limits = PLAN_LIMITS[membership.plan] || PLAN_LIMITS.free;
+    const monthKey = getMonthKey();
+    const usage = await getOrCreateUsageCounter(supabase, user.id, monthKey);
+
+    if (usage.checks_used >= limits.maxChecksPerMonth) {
+      return Response.json(
+        {
+          error: "You reached your monthly answer-check limit.",
+          usage: {
+            plan: membership.plan,
+            monthKey,
+            generationsUsed: usage.generations_used,
+            generationsLimit: limits.maxGenerationsPerMonth,
+            checksUsed: usage.checks_used,
+            checksLimit: limits.maxChecksPerMonth,
+          },
+        },
+        { status: 403 }
+      );
     }
 
     const { questions = [], answers = {} } = await req.json();
@@ -141,7 +243,21 @@ ${JSON.stringify(openEndedToCheck, null, 2)}
       results.push(...(checkedResults || []));
     }
 
-    return Response.json({ results });
+    await incrementChecks(supabase, usage);
+
+    return Response.json({
+      results,
+      usage: {
+        plan: membership.plan,
+        monthKey,
+        generationsUsed: usage.generations_used,
+        generationsLimit: limits.maxGenerationsPerMonth,
+        checksUsed: usage.checks_used + 1,
+        checksLimit: limits.maxChecksPerMonth,
+        maxMcq: limits.maxMcq,
+        maxOpenEnded: limits.maxOpenEnded,
+      },
+    });
   } catch (error) {
     return Response.json(
       { error: error.message || "Unexpected server error" },
