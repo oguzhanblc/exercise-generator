@@ -31,7 +31,7 @@ export default function LoginPage() {
 
   return (
     <div style={{ padding: 40 }}>
-      <h1>Log In</h1>
+      <h1>Log In to LearnForge</h1>
       <form onSubmit={handleLogin} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
         <input
           type="email"
@@ -53,4 +53,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
