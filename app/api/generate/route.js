@@ -43,33 +43,3 @@ Return only numbered questions.
     );
   }
 }
-    }
-
-    return new Response(
-      JSON.stringify({
-        result: Array.isArray(data)
-          ? data[0]?.generated_text || "No result returned."
-          : data.generated_text || JSON.stringify(data),
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({
-        error: error.message || "Unexpected server error",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-  }
-}
-      { error: error.message || "Unexpected server error" },
-      { status: 500 }
-    );
-  }
-}
