@@ -25,15 +25,24 @@ Return only numbered questions.
     const data = await response.json();
 
     if (!response.ok) {
-      return new Response(
-        JSON.stringify({
-          error: data.error || "Hugging Face request failed",
-        }),
-        {
-          status: response.status,
-          headers: { "Content-Type": "application/json" },
-        }
+      return Response.json(
+        { error: data.error || "Hugging Face request failed" },
+        { status: response.status }
       );
+    }
+
+    return Response.json({
+      result: Array.isArray(data)
+        ? data[0]?.generated_text || "No result returned."
+        : data.generated_text || JSON.stringify(data),
+    });
+  } catch (error) {
+    return Response.json(
+      { error: error.message || "Unexpected server error" },
+      { status: 500 }
+    );
+  }
+}
     }
 
     return new Response(
