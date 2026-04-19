@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { createClient } from "../../lib/supabase/client";
 
 const styles = {
   page: {
@@ -292,9 +293,22 @@ export default function HomeClient({ userEmail, logoutButton }) {
       setAnswers({});
       setResults([]);
 
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setMessage("Please log in to generate exercises.");
+        return;
+      }
+
       const res = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           topic,
           level,
@@ -323,9 +337,22 @@ export default function HomeClient({ userEmail, logoutButton }) {
       setChecking(true);
       setMessage("");
 
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setMessage("Please log in to check answers.");
+        return;
+      }
+
       const res = await fetch("/api/check", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({ questions, answers }),
       });
 
