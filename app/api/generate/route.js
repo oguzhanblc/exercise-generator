@@ -2,12 +2,13 @@ export async function POST(req) {
   const { topic, level } = await req.json();
 
   const prompt = `
-Generate 5 ${level} level exercises about ${topic}.
-Include questions only, no explanation.
+You are a tutor.
+Create 5 ${level} level exercises about ${topic}.
+Return only numbered questions.
 `;
 
   const response = await fetch(
-    "https://api-inference.huggingface.co/models/google/flan-t5-small",
+    "https://api-inference.huggingface.co/models/bigscience/bloomz-560m",
     {
       method: "POST",
       headers: {
@@ -16,21 +17,16 @@ Include questions only, no explanation.
       },
       body: JSON.stringify({
         inputs: prompt,
+        parameters: {
+          max_new_tokens: 200
+        }
       }),
     }
   );
 
   const text = await response.text();
 
-  try {
-    const data = JSON.parse(text);
-
-    return Response.json({
-      result: data?.[0]?.generated_text || JSON.stringify(data),
-    });
-  } catch {
-    return Response.json({
-      result: "RAW: " + text,
-    });
-  }
+  return Response.json({
+    result: text,
+  });
 }
