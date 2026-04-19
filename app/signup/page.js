@@ -23,12 +23,12 @@ export default function SignupPage() {
       return;
     }
 
-    setMessage("Account created. Check your email to verify your account.");
+    setMessage("Account created. Check your email to verify your LearnForge account.");
   };
 
   return (
     <div style={{ padding: 40 }}>
-      <h1>Sign Up</h1>
+      <h1>Create Your LearnForge Account</h1>
       <form onSubmit={handleSignup} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
         <input
           type="email"
@@ -50,4 +50,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
