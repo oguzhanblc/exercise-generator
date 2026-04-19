@@ -2,7 +2,7 @@ export async function POST(req) {
   const { topic } = await req.json();
 
   const response = await fetch(
-    "https://api-inference.huggingface.co/models/google/flan-t5-base",
+    "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
     {
       method: "POST",
       headers: {
@@ -10,26 +10,21 @@ export async function POST(req) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        inputs: `Create exercises about ${topic}`,
+        inputs: `Create 5 simple learning exercises about ${topic}. Keep it structured.`,
       }),
     }
   );
 
   const text = await response.text();
 
-  // IMPORTANT: log raw response
-  console.log("RAW RESPONSE:", text);
-
-  let data;
   try {
-    data = JSON.parse(text);
-  } catch (e) {
+    const data = JSON.parse(text);
     return Response.json({
-      result: "Non-JSON response received: " + text.slice(0, 200),
+      result: data?.[0]?.generated_text || JSON.stringify(data),
+    });
+  } catch {
+    return Response.json({
+      result: "RAW: " + text,
     });
   }
-
-  return Response.json({
-    result: data?.[0]?.generated_text || JSON.stringify(data),
-  });
 }
