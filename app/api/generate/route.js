@@ -2,7 +2,7 @@ export async function POST(req) {
   const { topic } = await req.json();
 
   const response = await fetch(
-    "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+    "https://api-inference.huggingface.co/models/google/flan-t5-small",
     {
       method: "POST",
       headers: {
@@ -10,12 +10,19 @@ export async function POST(req) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        inputs: `Create 5 simple learning exercises about ${topic}. Keep it structured.`,
+        inputs: `Generate 5 short exercises about ${topic}`,
       }),
     }
   );
 
   const text = await response.text();
+
+  // If Hugging Face returns HTML or error, show it
+  if (!text.startsWith("[")) {
+    return Response.json({
+      result: "HF ERROR: " + text.slice(0, 200),
+    });
+  }
 
   try {
     const data = JSON.parse(text);
@@ -24,7 +31,7 @@ export async function POST(req) {
     });
   } catch {
     return Response.json({
-      result: "RAW: " + text,
+      result: "Parse error: " + text,
     });
   }
 }
