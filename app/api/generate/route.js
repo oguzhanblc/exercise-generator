@@ -1,24 +1,17 @@
 export async function POST(req) {
   const { topic } = await req.json();
 
-  const response = await fetch(
-    "https://api-inference.huggingface.co/models/bigscience/bloom-560m",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.HF_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        inputs: `Write 5 short learning exercises about ${topic}`,
-      }),
-    }
-  );
+  const exercises = `
+Exercises for ${topic}:
 
-  const text = await response.text();
+1. What is ${topic}? Explain in your own words.
+2. Give 3 real-world examples of ${topic}.
+3. Why is ${topic} important?
+4. Create one simple question about ${topic}.
+5. Summarize ${topic} in one sentence.
+`;
 
-  // Always return raw for debugging safety
   return Response.json({
-    result: text,
+    result: exercises,
   });
 }
