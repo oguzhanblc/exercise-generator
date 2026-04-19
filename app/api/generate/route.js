@@ -1,4 +1,5 @@
 import { createAdminClient } from "../../../lib/supabase/admin";
+import { PLAN_LIMITS } from "../../../lib/plan-limits";
 
 function parseJsonFromText(text) {
   const trimmed = text.trim();
@@ -16,6 +17,12 @@ function parseJsonFromText(text) {
 
 function toSafeString(value, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
+}
+
+function getMonthKey() {
+  const now = new Date();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${month}`;
 }
 
 function normalizeQuestions(rawQuestions, mcqCount, openEndedCount) {
@@ -116,7 +123,71 @@ async function requireUser(req) {
     return { error: "Invalid session. Please log in again.", status: 401 };
   }
 
-  return { user };
+  return { user, supabase };
+}
+
+async function getMembership(supabase, userId) {
+  const { data, error } = await supabase
+    .from("memberships")
+    .select("plan, status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Could not load membership.");
+  }
+
+  const plan = data?.plan || "free";
+  const status = data?.status || "active";
+
+  return { plan, status };
+}
+
+async function getOrCreateUsageCounter(supabase, userId, monthKey) {
+  const { data: existing, error: fetchError } = await supabase
+    .from("usage_counters")
+    .select("id, generations_used, checks_used, month_key")
+    .eq("user_id", userId)
+    .eq("month_key", monthKey)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error("Could not load usage.");
+  }
+
+  if (existing) {
+    return existing;
+  }
+
+  const { data: created, error: createError } = await supabase
+    .from("usage_counters")
+    .insert({
+      user_id: userId,
+      month_key: monthKey,
+      generations_used: 0,
+      checks_used: 0,
+    })
+    .select("id, generations_used, checks_used, month_key")
+    .single();
+
+  if (createError) {
+    throw new Error("Could not create usage counter.");
+  }
+
+  return created;
+}
+
+async function incrementGenerations(supabase, usageRow) {
+  const { error } = await supabase
+    .from("usage_counters")
+    .update({
+      generations_used: usageRow.generations_used + 1,
+    })
+    .eq("id", usageRow.id);
+
+  if (error) {
+    throw new Error("Could not update generation usage.");
+  }
 }
 
 export async function POST(req) {
@@ -127,18 +198,45 @@ export async function POST(req) {
       return Response.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const FREE_MCQ_LIMIT = 5;
-    const FREE_OPEN_LIMIT = 2;
+    const { user, supabase } = authResult;
+    const membership = await getMembership(supabase, user.id);
 
-    const {
-      topic,
-      level = "beginner",
-      mcqCount = FREE_MCQ_LIMIT,
-      openEndedCount = FREE_OPEN_LIMIT,
-    } = await req.json();
+    if (membership.status !== "active") {
+      return Response.json(
+        { error: "Your membership is not active." },
+        { status: 403 }
+      );
+    }
 
-    const mcqTarget = Math.min(Number(mcqCount), FREE_MCQ_LIMIT);
-    const openTarget = Math.min(Number(openEndedCount), FREE_OPEN_LIMIT);
+    const limits = PLAN_LIMITS[membership.plan] || PLAN_LIMITS.free;
+    const monthKey = getMonthKey();
+    const usage = await getOrCreateUsageCounter(supabase, user.id, monthKey);
+
+    if (usage.generations_used >= limits.maxGenerationsPerMonth) {
+      return Response.json(
+        {
+          error: "You reached your monthly generation limit.",
+          usage: {
+            plan: membership.plan,
+            monthKey,
+            generationsUsed: usage.generations_used,
+            generationsLimit: limits.maxGenerationsPerMonth,
+            checksUsed: usage.checks_used,
+            checksLimit: limits.maxChecksPerMonth,
+          },
+        },
+        { status: 403 }
+      );
+    }
+
+    const body = await req.json();
+    const topic = body.topic;
+    const level = body.level || "beginner";
+    const requestedMcq = Number(body.mcqCount ?? limits.maxMcq);
+    const requestedOpen = Number(body.openEndedCount ?? limits.maxOpenEnded);
+
+    const mcqTarget = Math.min(requestedMcq, limits.maxMcq);
+    const openTarget = Math.min(requestedOpen, limits.maxOpenEnded);
 
     const prompt = `
 You are creating a practice worksheet.
@@ -204,7 +302,21 @@ Return only valid JSON with the required schema.
       );
     }
 
-    return Response.json({ questions });
+    await incrementGenerations(supabase, usage);
+
+    return Response.json({
+      questions,
+      usage: {
+        plan: membership.plan,
+        monthKey,
+        generationsUsed: usage.generations_used + 1,
+        generationsLimit: limits.maxGenerationsPerMonth,
+        checksUsed: usage.checks_used,
+        checksLimit: limits.maxChecksPerMonth,
+        maxMcq: limits.maxMcq,
+        maxOpenEnded: limits.maxOpenEnded,
+      },
+    });
   } catch (error) {
     return Response.json(
       { error: error.message || "Unexpected server error" },
