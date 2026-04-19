@@ -16,24 +16,49 @@ Return only numbered questions.
           Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ inputs: prompt }),
+        body: JSON.stringify({
+          inputs: prompt,
+        }),
       }
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      return Response.json(
-        { error: data.error || "Hugging Face request failed" },
-        { status: response.status }
+      return new Response(
+        JSON.stringify({
+          error: data.error || "Hugging Face request failed",
+        }),
+        {
+          status: response.status,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
-    return Response.json({
-      result: Array.isArray(data) ? data[0]?.generated_text ?? "" : data.generated_text ?? JSON.stringify(data),
-    });
+    return new Response(
+      JSON.stringify({
+        result: Array.isArray(data)
+          ? data[0]?.generated_text || "No result returned."
+          : data.generated_text || JSON.stringify(data),
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
-    return Response.json(
+    return new Response(
+      JSON.stringify({
+        error: error.message || "Unexpected server error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
       { error: error.message || "Unexpected server error" },
       { status: 500 }
     );
