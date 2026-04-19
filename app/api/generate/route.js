@@ -12,42 +12,57 @@ function parseJsonFromText(text) {
   return JSON.parse(trimmed);
 }
 
-function isValidMcq(question) {
-  return (
-    question &&
-    question.type === "multiple-choice" &&
-    typeof question.question === "string" &&
-    Array.isArray(question.options) &&
-    question.options.length === 4 &&
-    question.options.every((option) => typeof option === "string") &&
-    typeof question.correctAnswer === "string" &&
-    question.options.includes(question.correctAnswer)
-  );
+function toSafeString(value, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback;
 }
 
-function isValidOpen(question) {
-  return (
-    question &&
-    question.type === "open-ended" &&
-    typeof question.question === "string" &&
-    typeof question.sampleAnswer === "string" &&
-    Array.isArray(question.acceptedPoints)
-  );
-}
-
-function validateQuestions(questions, mcqCount, openEndedCount) {
-  if (!Array.isArray(questions)) {
-    return false;
+function normalizeQuestions(rawQuestions, mcqCount, openEndedCount) {
+  if (!Array.isArray(rawQuestions)) {
+    return [];
   }
 
-  const mcqs = questions.filter((question) => question.type === "multiple-choice");
-  const openEnded = questions.filter((question) => question.type === "open-ended");
+  const mcqs = rawQuestions
+    .filter((question) => question?.type === "multiple-choice")
+    .map((question, index) => {
+      const options = Array.isArray(question.options)
+        ? question.options.filter((option) => typeof option === "string").slice(0, 4)
+        : [];
 
-  if (mcqs.length !== mcqCount || openEnded.length !== openEndedCount) {
-    return false;
-  }
+      let correctAnswer = toSafeString(question.correctAnswer);
 
-  return mcqs.every(isValidMcq) && openEnded.every(isValidOpen);
+      if (!options.includes(correctAnswer) && options.length > 0) {
+        correctAnswer = options[0];
+      }
+
+      return {
+        id: `mcq-${index + 1}`,
+        type: "multiple-choice",
+        question: toSafeString(question.question, `Question ${index + 1}`),
+        options:
+          options.length === 4
+            ? options
+            : ["Option A", "Option B", "Option C", "Option D"],
+        correctAnswer,
+        explanation: toSafeString(question.explanation),
+      };
+    })
+    .slice(0, mcqCount);
+
+  const openEnded = rawQuestions
+    .filter((question) => question?.type === "open-ended")
+    .map((question, index) => ({
+      id: `open-${index + 1}`,
+      type: "open-ended",
+      question: toSafeString(question.question, `Question ${index + 1}`),
+      sampleAnswer: toSafeString(question.sampleAnswer, "No sample answer provided."),
+      acceptedPoints: Array.isArray(question.acceptedPoints)
+        ? question.acceptedPoints.filter((point) => typeof point === "string").slice(0, 4)
+        : [],
+      explanation: toSafeString(question.explanation),
+    }))
+    .slice(0, openEndedCount);
+
+  return [...mcqs, ...openEnded];
 }
 
 async function requestQuestions(prompt) {
@@ -106,7 +121,6 @@ Use this exact schema:
 {
   "questions": [
     {
-      "id": "mcq-1",
       "type": "multiple-choice",
       "question": "string",
       "options": ["string", "string", "string", "string"],
@@ -114,7 +128,6 @@ Use this exact schema:
       "explanation": "short explanation"
     },
     {
-      "id": "open-1",
       "type": "open-ended",
       "question": "string",
       "sampleAnswer": "short model answer",
@@ -128,54 +141,38 @@ Rules:
 - Create exactly ${mcqTarget} multiple-choice questions.
 - Create exactly ${openTarget} open-ended questions.
 - Multiple-choice questions must each have exactly 4 options.
-- Only one multiple-choice option can be correct.
-- "correctAnswer" must be identical to one of the option strings.
-- Open-ended questions should have concise, checkable answers.
-- "acceptedPoints" should contain 2 to 4 short points.
-- Keep wording clear and student-friendly.
-- Match the difficulty level carefully:
-  - beginner: simple recall/basic understanding
-  - intermediate: application and comparison
-  - advanced: deeper reasoning and synthesis
+- Only one option can be correct.
+- Open-ended questions should be short and checkable.
 `;
 
-    let questions;
+    let rawQuestions;
 
     try {
-      questions = await requestQuestions(prompt);
-    } catch (error) {
-      questions = null;
+      rawQuestions = await requestQuestions(prompt);
+    } catch {
+      rawQuestions = null;
     }
 
-    if (!validateQuestions(questions, mcqTarget, openTarget)) {
+    if (!Array.isArray(rawQuestions)) {
       const retryPrompt = `${prompt}
 
-Your previous answer was invalid.
-Retry and follow the schema exactly.
-Make sure the JSON is valid and complete.
+Your previous response was invalid.
+Return only valid JSON with the required schema.
 `;
 
-      questions = await requestQuestions(retryPrompt);
+      rawQuestions = await requestQuestions(retryPrompt);
     }
 
-    if (!validateQuestions(questions, mcqTarget, openTarget)) {
+    const questions = normalizeQuestions(rawQuestions, mcqTarget, openTarget);
+
+    if (questions.length === 0) {
       return Response.json(
-        { error: "The AI returned an invalid exercise format. Please try again." },
+        { error: "The AI could not generate usable questions. Please try another topic." },
         { status: 500 }
       );
     }
 
-    const normalizedQuestions = questions.map((question, index) => ({
-      ...question,
-      id:
-        question.id ||
-        (question.type === "open-ended" ? `open-${index + 1}` : `mcq-${index + 1}`),
-      explanation: typeof question.explanation === "string" ? question.explanation : "",
-      options: Array.isArray(question.options) ? question.options.slice(0, 4) : [],
-      acceptedPoints: Array.isArray(question.acceptedPoints) ? question.acceptedPoints : [],
-    }));
-
-    return Response.json({ questions: normalizedQuestions });
+    return Response.json({ questions });
   } catch (error) {
     return Response.json(
       { error: error.message || "Unexpected server error" },
