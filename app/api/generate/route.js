@@ -1,3 +1,5 @@
+import { createAdminClient } from "../../../lib/supabase/admin";
+
 function parseJsonFromText(text) {
   const trimmed = text.trim();
 
@@ -95,17 +97,48 @@ async function requestQuestions(prompt) {
   return parsed.questions;
 }
 
+async function requireUser(req) {
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { error: "You must be logged in.", status: 401 };
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  const supabase = createAdminClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return { error: "Invalid session. Please log in again.", status: 401 };
+  }
+
+  return { user };
+}
+
 export async function POST(req) {
   try {
+    const authResult = await requireUser(req);
+
+    if (authResult.error) {
+      return Response.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    const FREE_MCQ_LIMIT = 5;
+    const FREE_OPEN_LIMIT = 2;
+
     const {
       topic,
       level = "beginner",
-      mcqCount = 3,
-      openEndedCount = 2,
+      mcqCount = FREE_MCQ_LIMIT,
+      openEndedCount = FREE_OPEN_LIMIT,
     } = await req.json();
 
-    const mcqTarget = Number(mcqCount);
-    const openTarget = Number(openEndedCount);
+    const mcqTarget = Math.min(Number(mcqCount), FREE_MCQ_LIMIT);
+    const openTarget = Math.min(Number(openEndedCount), FREE_OPEN_LIMIT);
 
     const prompt = `
 You are creating a practice worksheet.
@@ -159,7 +192,6 @@ Rules:
 Your previous response was invalid.
 Return only valid JSON with the required schema.
 `;
-
       rawQuestions = await requestQuestions(retryPrompt);
     }
 
