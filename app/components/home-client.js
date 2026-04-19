@@ -136,6 +136,18 @@ const styles = {
     color: "#6b7280",
     lineHeight: 1.7,
   },
+  usageBox: {
+    marginTop: 18,
+    padding: 14,
+    borderRadius: 14,
+    background: "#f8fafc",
+    border: "1px solid #e5e7eb",
+  },
+  usageRow: {
+    margin: "6px 0",
+    color: "#374151",
+    fontWeight: 600,
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
@@ -257,13 +269,13 @@ const styles = {
 };
 
 export default function HomeClient({ userEmail, logoutButton }) {
-  const FREE_MCQ_LIMIT = 5;
-  const FREE_OPEN_LIMIT = 2;
-
+  const [planName, setPlanName] = useState("free");
+  const [generationUsage, setGenerationUsage] = useState({ used: 0, limit: 20 });
+  const [checkUsage, setCheckUsage] = useState({ used: 0, limit: 40 });
   const [topic, setTopic] = useState("");
   const [level, setLevel] = useState("beginner");
-  const [mcqCount, setMcqCount] = useState(FREE_MCQ_LIMIT);
-  const [openEndedCount, setOpenEndedCount] = useState(FREE_OPEN_LIMIT);
+  const [mcqCount, setMcqCount] = useState(5);
+  const [openEndedCount, setOpenEndedCount] = useState(2);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [results, setResults] = useState([]);
@@ -278,6 +290,25 @@ export default function HomeClient({ userEmail, logoutButton }) {
 
   const updateAnswer = (id, value) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const applyUsage = (usage) => {
+    if (!usage) return;
+    setPlanName(usage.plan || "free");
+    setGenerationUsage({
+      used: usage.generationsUsed ?? 0,
+      limit: usage.generationsLimit ?? 20,
+    });
+    setCheckUsage({
+      used: usage.checksUsed ?? 0,
+      limit: usage.checksLimit ?? 40,
+    });
+    if (usage.maxMcq) {
+      setMcqCount((current) => Math.min(current, usage.maxMcq));
+    }
+    if (usage.maxOpenEnded) {
+      setOpenEndedCount((current) => Math.min(current, usage.maxOpenEnded));
+    }
   };
 
   const generate = async () => {
@@ -320,11 +351,13 @@ export default function HomeClient({ userEmail, logoutButton }) {
       const data = await res.json();
 
       if (!res.ok) {
+        applyUsage(data.usage);
         setMessage(data.error || "Something went wrong.");
         return;
       }
 
       setQuestions(data.questions || []);
+      applyUsage(data.usage);
     } catch (error) {
       setMessage("Request failed. Please try again.");
     } finally {
@@ -359,11 +392,13 @@ export default function HomeClient({ userEmail, logoutButton }) {
       const data = await res.json();
 
       if (!res.ok) {
+        applyUsage(data.usage);
         setMessage(data.error || "Could not check answers.");
         return;
       }
 
       setResults(data.results || []);
+      applyUsage(data.usage);
     } catch (error) {
       setMessage("Answer check failed.");
     } finally {
@@ -475,23 +510,25 @@ export default function HomeClient({ userEmail, logoutButton }) {
           </div>
 
           <div style={styles.sideCard}>
-            <h2 style={{ marginTop: 0 }}>Free Plan</h2>
+            <h2 style={{ marginTop: 0 }}>Current Plan</h2>
             <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
-              Explore the product with a generous starter limit before adding accounts and saved history.
+              You are currently on the <strong>{planName}</strong> plan.
             </p>
-            <ul style={styles.sideList}>
-              <li>Up to 5 multiple-choice questions</li>
-              <li>Up to 2 open-ended questions</li>
-              <li>Difficulty: beginner, intermediate, advanced</li>
-              <li>Built-in answer checker</li>
-            </ul>
+            <div style={styles.usageBox}>
+              <div style={styles.usageRow}>
+                Generations used: {generationUsage.used} / {generationUsage.limit}
+              </div>
+              <div style={styles.usageRow}>
+                Answer checks used: {checkUsage.used} / {checkUsage.limit}
+              </div>
+            </div>
           </div>
         </div>
 
         <div style={styles.planner}>
           <h2 style={styles.sectionTitle}>Create Your Exercise Set</h2>
           <p style={styles.sectionText}>
-            Free users can generate up to 5 multiple-choice questions and 2 open-ended questions per set.
+            Your account limits are enforced automatically based on your membership.
           </p>
 
           <div style={styles.grid}>
@@ -524,7 +561,7 @@ export default function HomeClient({ userEmail, logoutButton }) {
                 <button
                   type="button"
                   style={styles.countBtn}
-                  onClick={() => changeCount(setMcqCount, mcqCount, -1, FREE_MCQ_LIMIT)}
+                  onClick={() => changeCount(setMcqCount, mcqCount, -1, 20)}
                 >
                   -
                 </button>
@@ -532,7 +569,7 @@ export default function HomeClient({ userEmail, logoutButton }) {
                 <button
                   type="button"
                   style={styles.countBtn}
-                  onClick={() => changeCount(setMcqCount, mcqCount, 1, FREE_MCQ_LIMIT)}
+                  onClick={() => changeCount(setMcqCount, mcqCount, 1, 20)}
                 >
                   +
                 </button>
@@ -545,7 +582,7 @@ export default function HomeClient({ userEmail, logoutButton }) {
                 <button
                   type="button"
                   style={styles.countBtn}
-                  onClick={() => changeCount(setOpenEndedCount, openEndedCount, -1, FREE_OPEN_LIMIT)}
+                  onClick={() => changeCount(setOpenEndedCount, openEndedCount, -1, 10)}
                 >
                   -
                 </button>
@@ -553,7 +590,7 @@ export default function HomeClient({ userEmail, logoutButton }) {
                 <button
                   type="button"
                   style={styles.countBtn}
-                  onClick={() => changeCount(setOpenEndedCount, openEndedCount, 1, FREE_OPEN_LIMIT)}
+                  onClick={() => changeCount(setOpenEndedCount, openEndedCount, 1, 10)}
                 >
                   +
                 </button>
@@ -562,11 +599,11 @@ export default function HomeClient({ userEmail, logoutButton }) {
           </div>
 
           <button onClick={generate} style={styles.generateButton} disabled={loading}>
-            {loading ? "Generating..." : "Generate Free Worksheet"}
+            {loading ? "Generating..." : "Generate Worksheet"}
           </button>
 
           <div style={styles.note}>
-            Free limit: maximum 5 MCQ and 2 open-ended questions.
+            Free plan defaults: 5 MCQ, 2 open-ended, 20 generations/month, 40 answer checks/month.
           </div>
 
           {message ? <div style={styles.error}>{message}</div> : null}
