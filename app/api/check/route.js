@@ -1,3 +1,5 @@
+import { createAdminClient } from "../../../lib/supabase/admin";
+
 function normalize(text) {
   return String(text || "").trim().toLowerCase();
 }
@@ -14,23 +16,6 @@ function parseJsonFromText(text) {
   }
 
   return JSON.parse(trimmed);
-}
-
-function isValidCheckResults(results, expectedIds) {
-  if (!Array.isArray(results)) {
-    return false;
-  }
-
-  const ids = new Set(expectedIds);
-
-  return results.every(
-    (item) =>
-      item &&
-      typeof item.id === "string" &&
-      ids.has(item.id) &&
-      typeof item.isCorrect === "boolean" &&
-      typeof item.feedback === "string"
-  );
 }
 
 async function requestOpenEndedCheck(prompt) {
@@ -63,8 +48,36 @@ async function requestOpenEndedCheck(prompt) {
   return parsed.results;
 }
 
+async function requireUser(req) {
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { error: "You must be logged in.", status: 401 };
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+  const supabase = createAdminClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
+
+  if (error || !user) {
+    return { error: "Invalid session. Please log in again.", status: 401 };
+  }
+
+  return { user };
+}
+
 export async function POST(req) {
   try {
+    const authResult = await requireUser(req);
+
+    if (authResult.error) {
+      return Response.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { questions = [], answers = {} } = await req.json();
 
     const results = [];
@@ -74,8 +87,7 @@ export async function POST(req) {
       const userAnswer = answers[question.id] || "";
 
       if (question.type === "multiple-choice") {
-        const isCorrect =
-          normalize(userAnswer) === normalize(question.correctAnswer);
+        const isCorrect = normalize(userAnswer) === normalize(question.correctAnswer);
 
         results.push({
           id: question.id,
@@ -97,8 +109,6 @@ export async function POST(req) {
     }
 
     if (openEndedToCheck.length > 0) {
-      const expectedIds = openEndedToCheck.map((item) => item.id);
-
       const prompt = `
 You are grading student answers.
 
@@ -127,32 +137,8 @@ Answers to grade:
 ${JSON.stringify(openEndedToCheck, null, 2)}
 `;
 
-      let checkedResults;
-
-      try {
-        checkedResults = await requestOpenEndedCheck(prompt);
-      } catch (error) {
-        checkedResults = null;
-      }
-
-      if (!isValidCheckResults(checkedResults, expectedIds)) {
-        const retryPrompt = `${prompt}
-
-Your previous answer was invalid.
-Retry and return only valid JSON in the required format.
-`;
-
-        checkedResults = await requestOpenEndedCheck(retryPrompt);
-      }
-
-      if (!isValidCheckResults(checkedResults, expectedIds)) {
-        return Response.json(
-          { error: "The AI returned an invalid answer-check format. Please try again." },
-          { status: 500 }
-        );
-      }
-
-      results.push(...checkedResults);
+      const checkedResults = await requestOpenEndedCheck(prompt);
+      results.push(...(checkedResults || []));
     }
 
     return Response.json({ results });
