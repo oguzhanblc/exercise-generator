@@ -48,32 +48,3 @@ export default function Home() {
     </div>
   );
 }
-        placeholder="Enter topic"
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-        style={{ padding: 10, marginRight: 10 }}
-      />
-
-      <button onClick={generate} style={{ padding: 10 }}>
-        Generate
-      </button>
-
-      <pre style={{ marginTop: 20 }}>{result}</pre>
-    </div>
-  );
-}
-        placeholder="Enter topic"
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-        style={{ padding: 10, marginRight: 10 }}
-      />
-
-      <button onClick={generate} style={{ padding: 10 }}>
-        Generate
-      </button>
-
-      <pre style={{ marginTop: 20 }}>{result}</pre>
-    </div>
-  );
-}
-}
