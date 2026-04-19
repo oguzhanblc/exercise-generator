@@ -1,132 +1,262 @@
 "use client";
 import { useMemo, useState } from "react";
 
-const pageStyle = {
-  minHeight: "100vh",
-  background: "linear-gradient(180deg, #f7f2e8 0%, #fffdf8 100%)",
-  padding: "40px 20px",
-  fontFamily: "Arial",
-  color: "#1f2937",
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background:
+      "radial-gradient(circle at top left, #f6efe3 0%, #f9f7f2 35%, #eef6f3 100%)",
+    fontFamily: "Arial",
+    color: "#1f2937",
+  },
+  shell: {
+    maxWidth: 1120,
+    margin: "0 auto",
+    padding: "24px 20px 60px",
+  },
+  nav: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 28,
+  },
+  brand: {
+    fontSize: 22,
+    fontWeight: 800,
+    color: "#174c43",
+    letterSpacing: 0.3,
+  },
+  navActions: {
+    display: "flex",
+    gap: 12,
+  },
+  ghostButton: {
+    padding: "10px 16px",
+    borderRadius: 999,
+    border: "1px solid #c8d8d2",
+    background: "rgba(255,255,255,0.7)",
+    color: "#174c43",
+    fontWeight: 700,
+    textDecoration: "none",
+  },
+  solidButton: {
+    padding: "10px 16px",
+    borderRadius: 999,
+    border: "none",
+    background: "#174c43",
+    color: "#fff",
+    fontWeight: 700,
+    textDecoration: "none",
+  },
+  hero: {
+    display: "grid",
+    gridTemplateColumns: "1.2fr 0.8fr",
+    gap: 24,
+    alignItems: "stretch",
+    marginBottom: 28,
+  },
+  heroCard: {
+    background: "rgba(255,255,255,0.82)",
+    border: "1px solid #e5e7eb",
+    borderRadius: 28,
+    padding: 32,
+    boxShadow: "0 18px 50px rgba(25, 45, 38, 0.08)",
+    backdropFilter: "blur(8px)",
+  },
+  eyebrow: {
+    display: "inline-block",
+    padding: "6px 12px",
+    borderRadius: 999,
+    background: "#e7f4ef",
+    color: "#174c43",
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: 1,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 52,
+    lineHeight: 1.05,
+    margin: "0 0 14px",
+    color: "#14213d",
+  },
+  subtitle: {
+    fontSize: 18,
+    lineHeight: 1.7,
+    color: "#4b5563",
+    marginBottom: 22,
+    maxWidth: 620,
+  },
+  stats: {
+    display: "flex",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  statPill: {
+    padding: "10px 14px",
+    borderRadius: 16,
+    background: "#f8fafc",
+    border: "1px solid #e5e7eb",
+    fontWeight: 700,
+    color: "#374151",
+  },
+  sideCard: {
+    background: "linear-gradient(180deg, #174c43 0%, #1f6f5f 100%)",
+    color: "#fff",
+    borderRadius: 28,
+    padding: 28,
+    boxShadow: "0 18px 50px rgba(23, 76, 67, 0.22)",
+  },
+  sideList: {
+    margin: "18px 0 0",
+    paddingLeft: 18,
+    lineHeight: 1.9,
+  },
+  planner: {
+    background: "rgba(255,255,255,0.88)",
+    border: "1px solid #e5e7eb",
+    borderRadius: 28,
+    padding: 28,
+    boxShadow: "0 18px 50px rgba(25, 45, 38, 0.06)",
+  },
+  sectionTitle: {
+    margin: "0 0 8px",
+    fontSize: 28,
+    color: "#14213d",
+  },
+  sectionText: {
+    margin: "0 0 20px",
+    color: "#6b7280",
+    lineHeight: 1.7,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: 16,
+  },
+  field: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: "#374151",
+  },
+  input: {
+    padding: 13,
+    borderRadius: 14,
+    border: "1px solid #d1d5db",
+    background: "#fff",
+    fontSize: 15,
+  },
+  countWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+  countBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    border: "1px solid #d1d5db",
+    background: "#fff",
+    cursor: "pointer",
+    fontSize: 20,
+  },
+  countValue: {
+    minWidth: 44,
+    textAlign: "center",
+    fontWeight: 800,
+    fontSize: 16,
+  },
+  generateButton: {
+    marginTop: 22,
+    padding: "14px 20px",
+    borderRadius: 16,
+    border: "none",
+    background: "#a44a3f",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+  note: {
+    marginTop: 14,
+    padding: "12px 14px",
+    background: "#fff7ed",
+    border: "1px solid #fed7aa",
+    borderRadius: 14,
+    color: "#9a3412",
+    fontWeight: 600,
+  },
+  error: {
+    marginTop: 14,
+    color: "#b42318",
+    fontWeight: 700,
+  },
+  score: {
+    marginTop: 24,
+    background: "#ecfdf3",
+    border: "1px solid #b7ebc6",
+    borderRadius: 18,
+    padding: 18,
+  },
+  qSection: {
+    marginTop: 24,
+    background: "rgba(255,255,255,0.88)",
+    border: "1px solid #e5e7eb",
+    borderRadius: 24,
+    padding: 24,
+    boxShadow: "0 18px 50px rgba(25, 45, 38, 0.05)",
+  },
+  qCard: {
+    marginTop: 16,
+    padding: 18,
+    borderRadius: 18,
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+  },
+  badge: (type) => ({
+    display: "inline-block",
+    padding: "5px 10px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 800,
+    background: type === "multiple-choice" ? "#e7f4ef" : "#fdf2e8",
+    color: type === "multiple-choice" ? "#174c43" : "#a44a3f",
+  }),
+  feedback: (ok) => ({
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 14,
+    background: ok ? "#ecfdf3" : "#fff1f3",
+    color: ok ? "#027a48" : "#b42318",
+    fontWeight: 700,
+    lineHeight: 1.5,
+  }),
+  checkButton: {
+    marginTop: 24,
+    padding: "14px 20px",
+    borderRadius: 16,
+    border: "none",
+    background: "#174c43",
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: 800,
+    cursor: "pointer",
+  },
 };
-
-const shellStyle = {
-  maxWidth: 980,
-  margin: "0 auto",
-};
-
-const heroStyle = {
-  background: "#fffaf0",
-  border: "1px solid #eadfca",
-  borderRadius: 20,
-  padding: 28,
-  boxShadow: "0 12px 30px rgba(90, 62, 20, 0.08)",
-  marginBottom: 24,
-};
-
-const gridStyle = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: 14,
-  marginTop: 18,
-};
-
-const fieldStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-};
-
-const labelStyle = {
-  fontSize: 14,
-  fontWeight: 700,
-  color: "#5b4636",
-};
-
-const inputStyle = {
-  padding: 12,
-  borderRadius: 12,
-  border: "1px solid #d6c6ad",
-  background: "#fff",
-  fontSize: 15,
-};
-
-const primaryButtonStyle = {
-  padding: "12px 18px",
-  borderRadius: 12,
-  border: "none",
-  background: "#1f6f5f",
-  color: "white",
-  fontSize: 15,
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle = {
-  padding: "12px 18px",
-  borderRadius: 12,
-  border: "none",
-  background: "#a44a3f",
-  color: "white",
-  fontSize: 15,
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const countWrapStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-};
-
-const countButtonStyle = {
-  width: 36,
-  height: 36,
-  borderRadius: 10,
-  border: "1px solid #d6c6ad",
-  background: "#fff",
-  fontSize: 20,
-  cursor: "pointer",
-};
-
-const countValueStyle = {
-  minWidth: 40,
-  textAlign: "center",
-  fontWeight: 700,
-  fontSize: 16,
-};
-
-const sectionStyle = {
-  background: "#fffaf0",
-  border: "1px solid #eadfca",
-  borderRadius: 18,
-  padding: 22,
-  boxShadow: "0 10px 24px rgba(42, 28, 10, 0.05)",
-  marginTop: 22,
-};
-
-const questionCardStyle = {
-  marginTop: 16,
-  padding: 18,
-  border: "1px solid #e7dcc8",
-  borderRadius: 16,
-  background: "#fff",
-};
-
-const badgeStyle = (type) => ({
-  display: "inline-block",
-  padding: "4px 10px",
-  borderRadius: 999,
-  background: type === "multiple-choice" ? "#e7f6f2" : "#fdf0e6",
-  color: type === "multiple-choice" ? "#1f6f5f" : "#a44a3f",
-  fontSize: 12,
-  fontWeight: 700,
-});
 
 export default function Home() {
+  const FREE_MCQ_LIMIT = 5;
+  const FREE_OPEN_LIMIT = 2;
+
   const [topic, setTopic] = useState("");
   const [level, setLevel] = useState("beginner");
-  const [mcqCount, setMcqCount] = useState(3);
-  const [openEndedCount, setOpenEndedCount] = useState(2);
+  const [mcqCount, setMcqCount] = useState(FREE_MCQ_LIMIT);
+  const [openEndedCount, setOpenEndedCount] = useState(FREE_OPEN_LIMIT);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [results, setResults] = useState([]);
@@ -134,16 +264,22 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
 
+  const changeCount = (setter, current, delta, max) => {
+    const next = Math.max(1, Math.min(max, Number(current) + delta));
+    setter(next);
+  };
+
   const updateAnswer = (id, value) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
   };
 
-  const changeCount = (setter, value) => {
-    setter((current) => Math.max(1, Number(current) + value));
-  };
-
   const generate = async () => {
     try {
+      if (!topic.trim()) {
+        setMessage("Please enter a topic first.");
+        return;
+      }
+
       setLoading(true);
       setMessage("");
       setQuestions([]);
@@ -184,10 +320,7 @@ export default function Home() {
       const res = await fetch("/api/check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questions,
-          answers,
-        }),
+        body: JSON.stringify({ questions, answers }),
       });
 
       const data = await res.json();
@@ -218,14 +351,10 @@ export default function Home() {
   );
 
   const score = useMemo(() => {
-    if (results.length === 0) {
-      return null;
-    }
-
+    if (!results.length) return null;
     const correct = results.filter((item) => item.isCorrect).length;
     const total = results.length;
     const percent = Math.round((correct / total) * 100);
-
     return { correct, total, percent };
   }, [results]);
 
@@ -233,14 +362,14 @@ export default function Home() {
     const checkResult = resultFor(question.id);
 
     return (
-      <div key={question.id} style={questionCardStyle}>
+      <div key={question.id} style={styles.qCard}>
         <div style={{ marginBottom: 10 }}>
-          <span style={badgeStyle(question.type)}>
+          <span style={styles.badge(question.type)}>
             {question.type === "multiple-choice" ? "Multiple Choice" : "Open-Ended"}
           </span>
         </div>
 
-        <h3 style={{ marginTop: 0, marginBottom: 14 }}>
+        <h3 style={{ marginTop: 0 }}>
           {index + 1}. {question.question}
         </h3>
 
@@ -264,64 +393,82 @@ export default function Home() {
             value={answers[question.id] || ""}
             onChange={(e) => updateAnswer(question.id, e.target.value)}
             rows={5}
-            style={{ ...inputStyle, width: "100%", resize: "vertical" }}
-            placeholder="Type your answer here"
+            style={{ ...styles.input, width: "100%", resize: "vertical" }}
+            placeholder="Write your answer here"
           />
         )}
 
         {checkResult ? (
-          <div
-            style={{
-              marginTop: 14,
-              padding: 12,
-              borderRadius: 12,
-              background: checkResult.isCorrect ? "#ecfdf3" : "#fff1f3",
-              color: checkResult.isCorrect ? "#027a48" : "#b42318",
-              fontWeight: 600,
-              lineHeight: 1.5,
-            }}
-          >
-            {checkResult.feedback}
-          </div>
+          <div style={styles.feedback(checkResult.isCorrect)}>{checkResult.feedback}</div>
         ) : null}
       </div>
     );
   };
 
   return (
-    <div style={pageStyle}>
-      <div style={shellStyle}>
-        <div style={heroStyle}>
-          <p style={{ margin: 0, color: "#a44a3f", fontWeight: 700, letterSpacing: 1 }}>
-            PRACTICE BUILDER
+    <div style={styles.page}>
+      <div style={styles.shell}>
+        <div style={styles.nav}>
+          <div style={styles.brand}>Exercise Generator</div>
+          <div style={styles.navActions}>
+            <a href="/login" style={styles.ghostButton}>Log In</a>
+            <a href="/signup" style={styles.solidButton}>Sign Up</a>
+          </div>
+        </div>
+
+        <div style={styles.hero}>
+          <div style={styles.heroCard}>
+            <div style={styles.eyebrow}>SMART PRACTICE</div>
+            <h1 style={styles.title}>Generate polished practice sets in seconds.</h1>
+            <p style={styles.subtitle}>
+              Build topic-based worksheets with multiple-choice and open-ended questions,
+              then let learners check their answers instantly.
+            </p>
+
+            <div style={styles.stats}>
+              <div style={styles.statPill}>3 difficulty levels</div>
+              <div style={styles.statPill}>Instant answer checking</div>
+              <div style={styles.statPill}>Free plan included</div>
+            </div>
+          </div>
+
+          <div style={styles.sideCard}>
+            <h2 style={{ marginTop: 0 }}>Free Plan</h2>
+            <p style={{ marginBottom: 0, lineHeight: 1.7 }}>
+              Explore the product with a generous starter limit before adding accounts and saved history.
+            </p>
+            <ul style={styles.sideList}>
+              <li>Up to 5 multiple-choice questions</li>
+              <li>Up to 2 open-ended questions</li>
+              <li>Difficulty: beginner, intermediate, advanced</li>
+              <li>Built-in answer checker</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style={styles.planner}>
+          <h2 style={styles.sectionTitle}>Create Your Exercise Set</h2>
+          <p style={styles.sectionText}>
+            Free users can generate up to 5 multiple-choice questions and 2 open-ended questions per set.
           </p>
 
-          <h1 style={{ marginTop: 10, marginBottom: 10, fontSize: 38 }}>
-            Exercise Generator
-          </h1>
-
-          <p style={{ marginTop: 0, marginBottom: 0, color: "#5b4636", lineHeight: 1.6 }}>
-            Choose a topic, set the difficulty, decide how many question types you want,
-            then generate a custom exercise set and check the answers.
-          </p>
-
-          <div style={gridStyle}>
-            <div style={{ ...fieldStyle, gridColumn: "span 2" }}>
-              <label style={labelStyle}>Topic</label>
+          <div style={styles.grid}>
+            <div style={{ ...styles.field, gridColumn: "span 2" }}>
+              <label style={styles.label}>Topic</label>
               <input
-                placeholder="Examples: fractions, photosynthesis, past tense"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                style={inputStyle}
+                placeholder="Examples: fractions, climate change, past simple"
+                style={styles.input}
               />
             </div>
 
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Difficulty</label>
+            <div style={styles.field}>
+              <label style={styles.label}>Difficulty</label>
               <select
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
-                style={inputStyle}
+                style={styles.input}
               >
                 <option value="beginner">Beginner</option>
                 <option value="intermediate">Intermediate</option>
@@ -329,42 +476,42 @@ export default function Home() {
               </select>
             </div>
 
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Multiple Choice Questions</label>
-              <div style={countWrapStyle}>
+            <div style={styles.field}>
+              <label style={styles.label}>Multiple Choice Questions</label>
+              <div style={styles.countWrap}>
                 <button
                   type="button"
-                  style={countButtonStyle}
-                  onClick={() => changeCount(setMcqCount, -1)}
+                  style={styles.countBtn}
+                  onClick={() => changeCount(setMcqCount, mcqCount, -1, FREE_MCQ_LIMIT)}
                 >
                   -
                 </button>
-                <div style={countValueStyle}>{mcqCount}</div>
+                <div style={styles.countValue}>{mcqCount}</div>
                 <button
                   type="button"
-                  style={countButtonStyle}
-                  onClick={() => changeCount(setMcqCount, 1)}
+                  style={styles.countBtn}
+                  onClick={() => changeCount(setMcqCount, mcqCount, 1, FREE_MCQ_LIMIT)}
                 >
                   +
                 </button>
               </div>
             </div>
 
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Open-Ended Questions</label>
-              <div style={countWrapStyle}>
+            <div style={styles.field}>
+              <label style={styles.label}>Open-Ended Questions</label>
+              <div style={styles.countWrap}>
                 <button
                   type="button"
-                  style={countButtonStyle}
-                  onClick={() => changeCount(setOpenEndedCount, -1)}
+                  style={styles.countBtn}
+                  onClick={() => changeCount(setOpenEndedCount, openEndedCount, -1, FREE_OPEN_LIMIT)}
                 >
                   -
                 </button>
-                <div style={countValueStyle}>{openEndedCount}</div>
+                <div style={styles.countValue}>{openEndedCount}</div>
                 <button
                   type="button"
-                  style={countButtonStyle}
-                  onClick={() => changeCount(setOpenEndedCount, 1)}
+                  style={styles.countBtn}
+                  onClick={() => changeCount(setOpenEndedCount, openEndedCount, 1, FREE_OPEN_LIMIT)}
                 >
                   +
                 </button>
@@ -372,59 +519,46 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ marginTop: 18 }}>
-            <button onClick={generate} style={primaryButtonStyle} disabled={loading}>
-              {loading ? "Generating..." : "Generate Exercises"}
-            </button>
+          <button onClick={generate} style={styles.generateButton} disabled={loading}>
+            {loading ? "Generating..." : "Generate Free Worksheet"}
+          </button>
+
+          <div style={styles.note}>
+            Free limit: maximum 5 MCQ and 2 open-ended questions.
           </div>
 
-          {message ? (
-            <p style={{ marginTop: 16, color: "#b42318", fontWeight: 600 }}>{message}</p>
-          ) : null}
+          {message ? <div style={styles.error}>{message}</div> : null}
         </div>
 
         {score ? (
-          <div
-            style={{
-              ...sectionStyle,
-              background: "#f6fbf9",
-              border: "1px solid #d2eadf",
-              marginTop: 0,
-            }}
-          >
-            <h2 style={{ marginTop: 0, marginBottom: 8 }}>Score Summary</h2>
-            <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#1f6f5f" }}>
+          <div style={styles.score}>
+            <h3 style={{ margin: "0 0 6px" }}>Score Summary</h3>
+            <div style={{ fontWeight: 800, fontSize: 18 }}>
               {score.correct} / {score.total} correct ({score.percent}%)
-            </p>
+            </div>
           </div>
         ) : null}
 
         {multipleChoiceQuestions.length > 0 ? (
-          <div style={sectionStyle}>
-            <h2 style={{ marginTop: 0, marginBottom: 4 }}>Multiple Choice</h2>
-            <p style={{ marginTop: 0, color: "#6b7280" }}>
-              Choose one answer for each question.
-            </p>
+          <div style={styles.qSection}>
+            <h2 style={{ marginTop: 0 }}>Multiple Choice</h2>
+            <p style={{ color: "#6b7280" }}>Choose one answer for each question.</p>
             {multipleChoiceQuestions.map((question, index) => renderQuestion(question, index))}
           </div>
         ) : null}
 
         {openEndedQuestions.length > 0 ? (
-          <div style={sectionStyle}>
-            <h2 style={{ marginTop: 0, marginBottom: 4 }}>Open-Ended</h2>
-            <p style={{ marginTop: 0, color: "#6b7280" }}>
-              Write your answer in your own words.
-            </p>
+          <div style={styles.qSection}>
+            <h2 style={{ marginTop: 0 }}>Open-Ended</h2>
+            <p style={{ color: "#6b7280" }}>Write your answer in your own words.</p>
             {openEndedQuestions.map((question, index) => renderQuestion(question, index))}
           </div>
         ) : null}
 
         {questions.length > 0 ? (
-          <div style={{ marginTop: 24 }}>
-            <button onClick={checkAnswers} style={secondaryButtonStyle} disabled={checking}>
-              {checking ? "Checking Answers..." : "Check Answers"}
-            </button>
-          </div>
+          <button onClick={checkAnswers} style={styles.checkButton} disabled={checking}>
+            {checking ? "Checking Answers..." : "Check Answers"}
+          </button>
         ) : null}
       </div>
     </div>
